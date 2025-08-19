@@ -10,6 +10,48 @@ outputs:
   - wf_min_small
 
 processors:
+  wf_short:
+    description: Shortened waveform; I try to fix this...
+    function: multiply
+    module: numpy
+    args:
+      - "waveform_bit_drop[round(48*us / waveform_bit_drop.period) : round(53*us / waveform_bit_drop.period)]"
+      - "1"
+      - "wf_short(len(waveform_bit_drop[round(48*us / waveform_bit_drop.period) : round(53*us / waveform_bit_drop.period)]),'float32')"
+    unit: ADC
+
+  bl, bl_sig, slope, intercept:
+    function: linear_slope_fit
+    module: dspeed.processors
+    args:
+      - "waveform_bit_drop[: round(20*us / waveform_bit_drop.period) ]"
+      - "bl"
+      - "bl_sig"
+      - "slope"
+      - "intercept"
+    unit: ["ADC", "ADC", "ADC", "ADC"]
+        
+  wf_blsub:
+    function: subtract
+    module: numpy
+    args:
+      - waveform_bit_drop
+      - bl
+      - wf_blsub
+    unit: ADC
+
+  trapped_wf:
+    description: trapped_wf
+    function: asym_trap_filter
+    module: dspeed.processors
+    args:
+      - wf_blsub
+      - round(96*ns / waveform_bit_drop.period)
+      - round(200*ns / waveform_bit_drop.period)
+      - round(1200*ns / waveform_bit_drop.period)
+      - trapped_wf
+    unit: ADC
+
   tp_min, tp_max, wf_min, wf_max:
     description: find max and min of the waveform with corresponding time points
     function: min_max
