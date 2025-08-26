@@ -70,6 +70,7 @@ processors:
       - wf_mode
       - wf_lower_hwhm
     unit: [ADC, ADC]
+
 # NEW TRIGGER / ENERGY
   wf_gaus_new:
     description: Gaussian filtered waveform
@@ -133,6 +134,51 @@ processors:
       - curr_mode_new
       - curr_fwhm_new
     unit: [ADC, ADC, ""]
+
+  trigger_pos_new, vt_min_out_new, n_max_out_new, n_min_out_new:
+    description:
+      Search for potential pe pulse candidates in current waveform by local
+      extrema search
+    function: get_multi_local_extrema
+    module: dspeed.processors
+    args:
+      - wf_curr_new
+      - db.extrema.delta_max * curr_fwhm_new
+      - db.extrema.delta_min * curr_fwhm_new
+      - db.extrema.search_dir
+      - db.extrema.abs_max * curr_fwhm_new
+      - db.extrema.abs_min
+      - trigger_pos_new(100, vector_len=n_max_out_new)
+      - vt_min_out_new(100, vector_len=n_max_out_new)
+      - n_max_out_new
+      - n_min_out_new
+    defaults:
+      db.extrema.abs_max: 2
+      db.extrema.abs_min: 0
+      db.extrema.delta_max: 3
+      db.extrema.delta_min: 3
+      db.extrema.search_dir: 3
+    unit: [ns, ns, "", ""]
+
+  energy_new:
+    description: Amplitude pickoff of found pe pulses
+    function: multi_a_filter
+    module: dspeed.processors
+    args:
+      - wf_curr_new
+      - trigger_pos_new
+      - energy_new(vector_len=len(trigger_pos_new))
+    unit: ADC
+
+# JUST FOR DEBUG
+  curr_mode_and_fwhm_sum:
+    function: add
+    module: numpy
+    args:
+      - curr_mode_new
+      - curr_fwhm_new
+      - curr_mode_and_fwhm_sum
+    unit: [ADC]
 
 
 # OLD TRIGGER / ENERGY
