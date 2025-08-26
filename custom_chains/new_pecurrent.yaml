@@ -70,7 +70,72 @@ processors:
       - wf_mode
       - wf_lower_hwhm
     unit: [ADC, ADC]
+# NEW TRIGGER / ENERGY
+  wf_gaus_new:
+    description: Gaussian filtered waveform
+    function: gaussian_filter1d
+    module: dspeed.processors
+    args:
+      - waveform_bit_drop
+      - >-
+        wf_gaus_new(
+          len(waveform_bit_drop),
+          period=waveform_bit_drop.period,
+          offset=waveform_bit_drop.offset
+        )
+    init_args:
+      - db.gauss.width
+    defaults:
+      db.gauss.width: 4
+    unit: ADC
 
+  wf_curr_new:
+    description: First derivative of gaussian filtered waveform
+    function: avg_current
+    module: dspeed.processors
+    args:
+      - wf_gaus_new
+      - db.current.width
+      - >-
+        wf_curr_new(
+          len(wf_gaus_new) - db.current.width,
+          period=wf_gaus_new.period,
+          offset=wf_gaus_new.offset + db.current.width // 2 * wf_gaus_new.period
+        )
+    defaults:
+      db.current.width: 2
+    unit: ADC/sample
+
+  curr_hist_new , curr_borders_new:
+    description: projection histogram of current waveform onto the adc-axis
+    function: histogram_around_mode
+    module: dspeed.processors
+    args:
+      - wf_curr_new
+      - 0
+      - 0.02
+      - curr_hist_new(101)
+      - curr_borders_new(102)
+    unit: [ADC, ADC]
+
+  curr_mode_new, curr_fwhm_new:
+    description:
+      Real FWHM and mode of projection histogram of current waveform onto the
+      adc-axis
+    function: histogram_peakstats
+    module: dspeed.processors
+    args:
+      - curr_hist_new
+      - curr_borders_new
+      - 0
+      - 0
+      - 0
+      - curr_mode_new
+      - curr_fwhm_new
+    unit: [ADC, ADC, ""]
+
+
+# OLD TRIGGER / ENERGY
   wf_gaus:
     description: Gaussian filtered waveform
     function: gaussian_filter1d
