@@ -10,6 +10,9 @@ outputs:
   - wf_min_small
 
 processors:
+
+# WF PROCESSOR PLAYGROUND ---
+
   wf_short:
     description: Shortened waveform; I try to fix this...
     function: multiply
@@ -51,6 +54,166 @@ processors:
       - round(1200*ns / waveform_bit_drop.period)
       - trapped_wf
     unit: ADC
+
+  wf_mw_shrt:
+    function: moving_window_left
+    module: dspeed.processors
+    args:
+      - wf_blsub
+      - round(96*ns / waveform_bit_drop.period)
+      - wf_mw_shrt
+    unit: ADC
+
+  wf_mw_lng:
+    function: moving_window_left
+    module: dspeed.processors
+    args:
+      - wf_blsub
+      - round(700*ns / waveform_bit_drop.period)
+      - wf_mw_lng
+    unit: ADC
+
+  wf_mwsub:
+    function: subtract
+    module: numpy
+    args:
+      - wf_mw_shrt
+      - wf_mw_lng
+      - wf_mwsub
+    unit: ADC
+
+  wf_pz:
+    function: pole_zero
+    module: dspeed.processors
+    args: 
+      - wf_blsub
+      - 2.6*us
+      - wf_pz
+    unit: ADC
+
+  trap_pz_wf:
+    description: trap after pz
+    function: trap_filter
+    module: dspeed.processors
+    args:
+      - wf_pz
+      - round(96*ns / waveform_bit_drop.period)
+      - round(200*ns / waveform_bit_drop.period)
+      - trap_pz_wf
+    unit: ADC
+
+# NOISE ID PLAYGROUND ---
+
+  curr_tp_min, curr_tp_max, curr_min, curr_max:
+    description: find max and min of the current waveform with time points
+    function: min_max
+    module: dspeed.processors
+    args:
+      - wf_curr
+      - curr_tp_min
+      - curr_tp_max
+      - curr_min
+      - curr_max
+    unit:
+      - ns
+      - ns
+      - ADC
+      - ADC
+  curr_tp_min_small, curr_tp_max_small, curr_min_small, curr_max_small:
+    description:
+      find max and min of current waveform with corresponding time points in a
+      window accounting for majority Ge t0 fluctuations
+    function: min_max
+    module: dspeed.processors
+    args:
+      - "wf_curr[round(45*us / wf_curr.period) : round(55*us /
+        wf_curr.period)]"
+      -  curr_tp_min_small
+      - curr_tp_max_small
+      - curr_min_small
+      - curr_max_small
+    unit:
+      - ns
+      - ns
+      - ADC
+      - ADC
+
+## for displaying wf_fwhm:
+  wf_fwhm_mode_sum:
+    description: sum of wf_mode and wf_fwhm
+    function: add
+    module: numpy
+    args:
+      - wf_mode
+      - wf_fwhm
+      - wf_fwhm_mode_sum
+    unit:
+      - ADC
+
+#  my fancy new histogram
+
+  wf_hist_new , wf_borders_new:
+    description: projection histogram of waveform onto the adc-axis, around mode
+    function: histogram_around_mode
+    module: dspeed.processors
+    args:
+      - waveform_bit_drop
+      - np.nan
+      - 1
+      - wf_hist_new(101)
+      - wf_borders_new(102)
+    unit: [ADC, ADC]
+
+  wf_mode_new , wf_fwhm_new:
+    description: finally real hist stats
+    function: histogram_peakstats
+    module: dspeed.processors
+    args:
+      - wf_hist_new
+      - wf_borders_new
+      - np.nan
+      - 0
+      - 0
+      - wf_mode_new
+      - wf_fwhm_new
+    unit: [ADC, ADC]
+
+  wf_mode_new_x , wf_low_hwhm_new:
+    description: finally real hist stats
+    function: histogram_peakstats
+    module: dspeed.processors
+    args:
+      - wf_hist_new
+      - wf_borders_new
+      - np.nan
+      - 0
+      - 3
+      - wf_mode_new_x
+      - wf_low_hwhm_new
+    unit: [ADC, ADC]
+
+## for displaying wf_fwhm:
+  wf_fwhm_mode_sum_new:
+    description: sum of wf_mode_new and wf_fwhm_new
+    function: add
+    module: numpy
+    args:
+      - wf_mode_new
+      - wf_fwhm_new
+      - wf_fwhm_mode_sum_new
+    unit:
+      - ADC
+
+  new_noise_cls_ths:
+    description: new noise classifier threshold
+    function: subtract
+    module: numpy
+    args:
+      - wf_mode_new_x
+      - (wf_low_hwhm_new * 4)
+      - new_noise_cls_ths
+    unit:
+      - ADC
 
   tp_min, tp_max, wf_min, wf_max:
     description: find max and min of the waveform with corresponding time points
