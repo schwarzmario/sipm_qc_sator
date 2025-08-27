@@ -153,10 +153,10 @@ processors:
       - n_max_out_new
       - n_min_out_new
     defaults:
-      db.extrema.abs_max: 2
+      db.extrema.abs_max: 1.4
       db.extrema.abs_min: 0
-      db.extrema.delta_max: 3
-      db.extrema.delta_min: 3
+      db.extrema.delta_max: 2.2
+      db.extrema.delta_min: 2.2
       db.extrema.search_dir: 3
     unit: [ns, ns, "", ""]
 
